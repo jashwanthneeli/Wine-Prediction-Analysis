@@ -1,0 +1,589 @@
+---
+title: "HW 5- FDS"
+author: "Jashwanth Neeli"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+(Technical Report
+Fundamentals of Data Science - Wine Dataset
+Sadiya Amreen- 2079690
+2022-11-11
+AIM:
+To evaluate and compare 2 different classification models on Wine prediction dataset from the UCI dataset library.)
+
+#a. Data gathering and integration 
+The first part is to get the data you will use.
+#You may use anything that has not been used in an assignment or tutorial.
+#It must have at least 100 data points and must include both numerical and categorial (or ordinal) variables.
+I recommend keeping this relatively straightforward because data 
+cleaning can take a lot of time if you choose a large, messy dataset. Kaggle 
+(https://www.kaggle.com/datasets) and the University of California at Irvine (UCI) 
+(https://archive.ics.uci.edu/ml/index.php) maintain collections of datasets, some even telling you if they are good examples for testing specific machine learning techniques. You may also choose to join together more than one dataset, for example to merge data on health outcomes by US state with a dataset on food statistics per state. Merging data is not required and will earn you a bonus point in this step. 
+```{r}
+#install package called Party, other types of classification methods are available as well, rpart etc.
+#party package allows us to do conditional inference tree(c-tree)
+#call libraries
+library(sandwich)
+library(zoo)
+library(party)
+#import the data set wine
+#make sure you click yes for headings, strings as factors checkmark
+ Winedata <- read.csv("C:/Depaul_1st_quarter_subject/Fundamentals_of_DS/Week10/wine_dset1.csv", stringsAsFactors=TRUE)
+
+```
+#b. Data Exploration 
+Using data exploration to understand what is happening is important throughout the pipeline, and is 
+not limited to this step. However, it is important to use some exploration early on to make sure you understand your data.
+#You must at least consider the distributions of each variable and at least some of the relationships between pairs of variables. 
+```{r}
+#data exploration
+#Checking the dimension of data
+dim(Winedata)
+```
+```{r}
+View( Winedata)
+
+```
+
+```{r}
+str(Winedata)
+
+dim(Winedata)
+nrow(Winedata)
+ncol(Winedata)
+
+
+```
+
+```{r}
+
+View(data.frame(sapply(Winedata, class)))
+
+```
+
+#VISUALIZING THE DATA:
+The following graphs visualizes each numerical column distributions :
+```{r}
+#Visualization: Numerical data - Type
+library(ggplot2)
+summary(Winedata$Type)
+ggplot (Winedata, aes (Type)) + geom_histogram( fill='pink',color="black" , bins = 20)
+#Visualization: Numerical data - Alcohol
+summary(Winedata$Alcohol)
+ggplot (Winedata, aes (Alcohol)) + geom_histogram( fill='red',color="black" , bins = 20)
+#Visualization: Numerical data - Malic_Acid
+summary(Winedata$Malic_Acid) 
+ggplot (Winedata, aes (Malic_Acid)) + geom_histogram( fill='orange',color="black" , bins = 20)
+#Visualization: Numerical data - Ash
+summary(Winedata$Ash) 
+ggplot (Winedata, aes (Ash)) + geom_histogram( fill='green',color="black" , bins = 20)
+#Visualization: Numerical data - Ash_Alcanity
+summary(Winedata$Ash_Alcanity) 
+ggplot (Winedata, aes (Ash_Alcanity)) + geom_histogram( fill='purple',color="black" , bins = 20)
+#Visualization: Numerical data - Magnesium
+summary(Winedata$Magnesium) 
+ggplot (Winedata, aes (Magnesium)) + geom_histogram( fill='brown',color="black" , bins = 20)
+#Visualization: Numerical data - Total_Phenols
+summary(Winedata$Total_Phenols) 
+ggplot (Winedata, aes (Total_Phenols)) + geom_histogram( fill='grey',color="black" , bins = 20)
+#Visualization: Numerical data - Flavanoids
+summary(Winedata$Flavanoids) 
+ggplot (Winedata, aes (Flavanoids)) + geom_histogram( fill='yellow',color="black" , bins = 20)
+#Visualization: Numerical data - Nonflavanoid_Phenols
+summary(Winedata$Nonflavanoid_Phenols) 
+ggplot (Winedata, aes (Nonflavanoid_Phenols)) + geom_histogram( fill='blue',color="black" , bins = 20)
+#Visualization: Numerical data - Proanthocyanins
+summary(Winedata$Proanthocyanins) 
+ggplot (Winedata, aes (Proanthocyanins)) + geom_histogram( fill='maroon',color="black" , bins = 20)
+#Visualization: Numerical data - Color_Intensity
+summary(Winedata$Color_Intensity) 
+ggplot (Winedata, aes (Color_Intensity)) + geom_histogram( fill='turquoise',color="black" , bins = 20)
+#Visualization: Numerical data - Hue
+summary(Winedata$Hue) 
+ggplot (Winedata, aes (Hue)) + geom_histogram( fill='magenta',color="black" , bins = 20)
+#Visualization: Numerical data -OD280
+summary(Winedata$OD280) 
+ggplot (Winedata, aes (OD280)) + geom_histogram( fill='yellow',color="black" , bins = 20)
+#Visualization: Numerical data -Proline
+summary(Winedata$Proline) 
+ggplot (Winedata, aes (Proline)) + geom_histogram( fill='aliceblue',color="black" , bins = 20)
+#Visualization: Numerical data -Phosphoric.acid
+```
+```{r}
+summary(Winedata$Phosphoric.acid) 
+ggplot (Winedata, aes (Phosphoric.acid)) + geom_histogram( fill='orange',color="black" , bins = 20)
+```
+
+
+#ANALYSIS OF DATA USING VISUALIZATION
+This is a histogram that gives the occurrences of the “Type”:
+
+```{r}
+ggplot(data=Winedata,aes(x=Type,fill=as.factor(Type)))+geom_histogram()+ labs(title = "Hist for Type Variable")
+```
+This is a density plot that tells us again about the Type Factor visually:
+```{r}
+ggplot(data=Winedata,aes(x=Type,fill=as.factor(Type)))+geom_density(alpha=0.4)+ labs(title = "Density plot for Type var")
+```
+This is a box-plot that generates a graph between Type and Alcohol factors in the data set:
+```{r}
+ggplot(data=Winedata,aes(x=as.factor(Type),y=Alcohol))+geom_boxplot()+labs(title = "BoxPlot btw Alcoho and type")
+```
+This is a line bar that generates a graph between Alcohol and Proline from our dataset:
+```{r}
+ggplot(data=Winedata,aes(x=Alcohol,y=Proline))+geom_line()+ labs(title = "LineBar")
+```
+Now we make a scatterplot between Proline , Alcohol and Output factors of our dataset :
+```{r}
+ggplot(data = Winedata,aes(x=Proline,y=Alcohol,color=Type))+geom_point(alpha=0.4,size=3)+labs(title = "Type of Alcohol and proline")
+```
+This is a Histogram that consist various columns of our dataset :
+```{r}
+ggplot(Winedata, aes(x = Alcohol)) + geom_histogram(fill = "green", color = "white") + facet_wrap(~Type, ncol = 1)+ labs(title = "Type of Alcohol")
+```
+
+
+
+```{r}
+
+wine_df <- Winedata
+
+```
+
+
+
+#c. Data Cleaning and PreProcessing
+as per plan
+1)create an extra columns in the dataset done
+2)pollute the data with NAs and factors done
+3)remove NAs
+4)remove column - 70% is null hence removing the column
+5)bin/smoothing
+6)num to categorical
+7)summarize after cleaning
+8)vizualizaing after cleaning
+
+```{r}
+#Counting number of NA’s 
+sum(is.na(wine_df))
+View(wine_df)
+```
+
+
+```{r}
+
+summary(wine_df)
+dim(wine_df)
+
+```
+
+
+```{r}
+wine_df$Wine_Model <- NULL
+
+#str(Winedata$Phosphoric.acid)
+wine_df$Phosphoric.acid <- as.numeric(wine_df$Phosphoric.acid)
+
+```
+
+
+```{r}
+#removing Phosphoric.acid column (70% of data is NA)
+wine_df$Phosphoric.acid <- NULL
+
+```
+
+
+```{r}
+
+wine_df <- within(wine_df, { 
+  Type[Type == 1] <- "A"
+  Type[Type == 2] <- "B"
+  Type[Type == 3] <- "C"
+   } )
+
+
+```
+
+
+```{r}
+
+complete.cases(wine_df)
+wine_df <- wine_df[complete.cases(wine_df),]
+sum(is.na(wine_df))
+```
+
+
+```{r}
+
+summary(wine_df)
+
+```
+
+The following graph explains how the dataset is correlated to one other:
+```{r}
+
+library(corrplot)
+
+#visualize correlation matrix
+
+corr_var <- dplyr::select(wine_df, -Type)
+#View(corr_var)
+corrplot(cor(corr_var))
+
+```
+
+#Data PreProcessing
+
+```{r}
+
+#summary before normalization
+summary(wine_df$Proline)
+str(wine_df)
+
+```
+
+
+```{r}
+library(caret)
+#min max
+#summary before normalization
+summary(wine_df$Proline)
+##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+##      0.0      0.0      5.0    998.6    399.0 100000.0
+#applying normalization
+file_mm <- wine_df[c(14)]
+preproc_mm <- preProcess(file_mm, method=c("range"))
+norm_mm <- predict(preproc_mm, file_mm)
+# the values range [0-1]
+#summary after normalization
+summary(norm_mm)
+
+```
+
+
+```{r}
+
+summary(wine_df)
+summary(Winedata)
+
+```
+
+```{r}
+
+#clustering - grouping of objects into diff groups of similar characteristics.
+library(stats)
+library(factoextra)
+library(ggplot2)
+library(tidyverse)
+library(caret)
+library(dplyr)
+# View dataset
+w_df <- wine_df
+head(w_df)
+dim(w_df)
+
+```
+
+
+```{r}
+
+# Remove class labels
+predictors <- w_df %>% select(-c(Type))
+head(predictors)
+
+```
+
+
+```{r}
+
+# Set seed
+set.seed(123)
+
+```
+
+
+```{r}
+
+# Center scale allows us to standardize the data 
+preproc <- preProcess(predictors, method=c("center", "scale"))
+# We have to call predict to fit our data based on preprocessing
+predictors <- predict(preproc, predictors)
+```
+
+
+```{r}
+library(stats)
+library(factoextra)
+library(ggplot2)
+library(tidyverse)
+library(caret)
+library(dplyr)
+# Find the knee
+fviz_nbclust(predictors, kmeans, method = "wss")
+
+```
+
+
+```{r}
+fviz_nbclust(predictors, kmeans, method = "silhouette")
+
+```
+
+
+```{r}
+
+# Fit the data
+k_fit <- kmeans(predictors, centers = 3, nstart = 25)
+# Display the kmeans object information
+k_fit
+
+```
+
+
+```{r}
+
+# Display the cluster plot
+fviz_cluster(k_fit, data = predictors)
+
+```
+
+
+```{r}
+
+# Calculate PCA
+pca = prcomp(predictors)
+# Save as dataframe
+rotated_data = as.data.frame(pca$x)
+# Add original labels as a reference
+rotated_data$Color <- w_df$Type
+# Plot and color by labels
+ggplot(data = rotated_data, aes(x = PC1, y = PC2, col = Color)) + geom_point(alpha = 0.3)
+
+```
+
+
+```{r}
+
+# Assign clusters as a new column
+rotated_data$Clusters = as.factor(k_fit$cluster)
+# Plot and color by labels
+ggplot(data = rotated_data, aes(x = PC1, y = PC2, col = Clusters)) + geom_point()
+
+```
+
+
+```{r}
+
+# Create a dataframe
+result <- data.frame(Type = w_df$Type, Kmeans = k_fit$cluster)
+# View the first 100 cases one by one
+head(result, n = 100)
+
+```
+
+
+```{r}
+
+# Crosstab for K Means
+result %>% group_by(Kmeans) %>% select(Kmeans, Type) %>% table()
+
+```
+
+
+
+
+
+
+
+
+
+```{r}
+#classification 2 KNN
+library(stats)
+library(factoextra)
+library(ggplot2)
+library(tidyverse)
+library(caret)
+library(dplyr)
+library(mlbench)
+library(sandwich)
+library(zoo)
+library(party)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(e1071)
+head(Winedata)
+
+set.seed(123)
+
+# Remember scaling is crucial for KNN
+ctrl <- trainControl(method="cv", number = 10) 
+knnFit <- train(Type ~ ., data = wine_df, 
+                method = "knn", 
+                trControl = ctrl, 
+                preProcess = c("center","scale"))
+
+#Output of kNN fit
+knnFit
+```
+```{r}
+set.seed(123)
+ctrl <- trainControl(method="cv", number = 10) 
+knnFit <- train(Type ~ ., data = wine_df, 
+                method = "knn", 
+                trControl = ctrl, 
+                preProcess = c("center","scale"),
+                tuneLength = 15)
+
+# Show a plot of accuracy vs k 
+plot(knnFit)
+```
+```{r}
+#done the first time you use it
+library(kknn)
+```
+
+
+
+```{r}
+# setup a tuneGrid with the tuning parameters
+tuneGrid <- expand.grid(kmax = 3:7,                        # test a range of k values 3 to 7
+                        kernel = c("rectangular", "cos"),  # regular and cosine-based distance functions
+                        distance = 1:3)                    # powers of Minkowski 1 to 3
+
+# tune and fit the model with 10-fold cross validation,
+# standardization, and our specialized tune grid
+kknn_fit <- train(Type ~ ., 
+                  data = wine_df,
+                  method = 'kknn',
+                  trControl = ctrl,
+                  preProcess = c('center', 'scale'),
+                  tuneGrid = tuneGrid)
+
+# Printing trained model provides report
+kknn_fit
+```
+
+```{r}
+# Predict
+pred_knn <- predict(kknn_fit, Winedata)
+
+# Generate confusion matrix
+confusionMatrix(as.factor(wine_df$Type), pred_knn)
+```
+```{r}
+knn_results = kknn_fit$results # gives just the table of results by parameter
+head(knn_results)
+```
+```{r}
+# group by k and distance function, create an aggregation by averaging
+knn_results <- knn_results %>%
+  group_by(kmax, kernel) %>%
+  mutate(avgacc = mean(Accuracy))
+head(knn_results)
+```
+
+```{r}
+# plot aggregated (over Minkowski power) accuracy per k, split by distance function
+ggplot(knn_results, aes(x=kmax, y=avgacc, color=kernel)) + 
+  geom_point(size=3) + geom_line()
+```
+
+
+```{r}
+#(CLASSIFIER-1)
+#Creating Partition of data into 70% and 30%
+mainindex = createDataPartition(y=wine_df$Type, p=0.7, list=FALSE)
+traindata = wine_df[mainindex,]
+testdata = wine_df[-mainindex,]
+```
+
+
+
+#SVM
+#SVM (CLASSIFIER-2)
+#Setting parameters
+```{r}
+
+grid <- expand.grid(C = 10^seq(-5,2,0.5))
+train_control = trainControl(method = "cv", number = 10)
+```
+
+
+```{r}
+library(stats)
+library(factoextra)
+library(ggplot2)
+library(tidyverse)
+library(caret)
+library(dplyr)
+library(mlbench)
+library(sandwich)
+library(zoo)
+library(party)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(e1071)
+#Applying Model
+svm_grid <- train(Type ~., data = traindata, method = "svmLinear",
+ trControl = train_control, tuneGrid = grid)
+svm_grid
+```
+
+
+```{r}
+#Applying Confusion Matrix on Test data 
+pred_svm <- predict(svm_grid, testdata)
+confusionMatrix(as.factor(testdata$Type), pred_svm)
+
+```
+
+
+#Data Evaluation
+```{r}
+
+#Creating Confusion Matrix 
+predsvm_ev <- predict(svm_grid, testdata)
+con_mat <- confusionMatrix(as.factor(testdata$Type), predsvm_ev)
+con_mat
+```
+```{r}
+# Store the byClass object of confusion matrix as a dataframe
+metrics <- as.data.frame(con_mat$byClass)
+# View the object
+metrics
+
+```
+
+#Getting Precision and Recall 
+```{r}
+
+# Get the precision value for each class
+metrics %>% select(c(Precision))
+# Get the recall value for each class
+metrics %>% select(c(Recall))
+
+```
+
+
+#Ploting ROC
+```{r}
+
+library(pROC)
+roccurve<-roc(response=testdata$Type,predictor=as.numeric(predsvm_ev))
+plot(roccurve, print.auc=TRUE)
+
+```
+Here the SVM model has a higher AUC and balanced accuracy score and therefore it would be desired if we want to have a more balanced classifier. The overall accuracy scores here only vary by a small margin and we might think that they are really similar. However, the SVM classifier is actually better at predicting the non-dominant class (positives) as seen in the confusion matrices.
+
+
+```{r}
+
+```
+
